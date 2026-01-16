@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from scipy import stats
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
 from sklearn.linear_model import LogisticRegression
@@ -21,6 +22,527 @@ warnings.filterwarnings('ignore')
 print("Module airline_satisfaction loaded")
 
 np.random.seed(42)
+
+def advanced_eda(train_df, test_df):
+    """
+    Perform advanced exploratory data analysis focusing on relationships with target variable.
+    Generates 8 visualizations and 2 report files.
+    """
+    print("\n" + "="*80)
+    print("ADVANCED EDA - ADDITIONAL ANALYSES")
+    print("="*80)
+
+    # Create a copy to avoid modifying original
+    train_df_copy = train_df.copy()
+
+    # Encode target for analysis
+    train_df_copy['satisfaction_encoded'] = train_df_copy['satisfaction'].map({'neutral or dissatisfied': 0, 'satisfied': 1})
+
+    # 1. Target variable analysis by different segments
+    print("\n1. Target variable analysis by different segments...")
+
+    # 1.1 Satisfaction by gender
+    print("\n1.1 Satisfaction by gender:")
+    gender_satisfaction = train_df_copy.groupby('Gender')['satisfaction_encoded'].mean() * 100
+    print(gender_satisfaction)
+
+    # 1.2 Satisfaction by customer type
+    print("\n1.2 Satisfaction by customer type:")
+    customer_satisfaction = train_df_copy.groupby('Customer Type')['satisfaction_encoded'].mean() * 100
+    print(customer_satisfaction)
+
+    # 1.3 Satisfaction by travel type
+    print("\n1.3 Satisfaction by travel type:")
+    travel_satisfaction = train_df_copy.groupby('Type of Travel')['satisfaction_encoded'].mean() * 100
+    print(travel_satisfaction)
+
+    # 1.4 Satisfaction by class
+    print("\n1.4 Satisfaction by class:")
+    class_satisfaction = train_df_copy.groupby('Class')['satisfaction_encoded'].mean() * 100
+    print(class_satisfaction)
+
+    # 2. Create visualization: Satisfaction by different segments
+    print("\n2. Creating satisfaction by segments visualization...")
+
+    fig1, axes1 = plt.subplots(2, 2, figsize=(14, 10))
+    fig1.suptitle('Satisfaction Rate by Different Segments', fontsize=16)
+
+    # Gender
+    gender_counts = train_df_copy.groupby(['Gender', 'satisfaction']).size().unstack()
+    gender_counts.plot(kind='bar', stacked=True, ax=axes1[0, 0], color=['#ff7f0e', '#1f77b4'])
+    axes1[0, 0].set_title('Satisfaction by Gender')
+    axes1[0, 0].set_xlabel('Gender')
+    axes1[0, 0].set_ylabel('Count')
+    axes1[0, 0].legend(title='Satisfaction')
+    axes1[0, 0].tick_params(axis='x', rotation=0)
+
+    # Customer Type
+    customer_counts = train_df_copy.groupby(['Customer Type', 'satisfaction']).size().unstack()
+    customer_counts.plot(kind='bar', stacked=True, ax=axes1[0, 1], color=['#ff7f0e', '#1f77b4'])
+    axes1[0, 1].set_title('Satisfaction by Customer Type')
+    axes1[0, 1].set_xlabel('Customer Type')
+    axes1[0, 1].set_ylabel('Count')
+    axes1[0, 1].legend(title='Satisfaction')
+    axes1[0, 1].tick_params(axis='x', rotation=0)
+
+    # Type of Travel
+    travel_counts = train_df_copy.groupby(['Type of Travel', 'satisfaction']).size().unstack()
+    travel_counts.plot(kind='bar', stacked=True, ax=axes1[1, 0], color=['#ff7f0e', '#1f77b4'])
+    axes1[1, 0].set_title('Satisfaction by Type of Travel')
+    axes1[1, 0].set_xlabel('Type of Travel')
+    axes1[1, 0].set_ylabel('Count')
+    axes1[1, 0].legend(title='Satisfaction')
+    axes1[1, 0].tick_params(axis='x', rotation=0)
+
+    # Class
+    class_counts = train_df_copy.groupby(['Class', 'satisfaction']).size().unstack()
+    class_counts.plot(kind='bar', stacked=True, ax=axes1[1, 1], color=['#ff7f0e', '#1f77b4'])
+    axes1[1, 1].set_title('Satisfaction by Class')
+    axes1[1, 1].set_xlabel('Class')
+    axes1[1, 1].set_ylabel('Count')
+    axes1[1, 1].legend(title='Satisfaction')
+    axes1[1, 1].tick_params(axis='x', rotation=0)
+
+    plt.tight_layout()
+    plt.savefig('figures/satisfaction_by_segments.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/satisfaction_by_segments.png")
+    plt.close(fig1)
+
+    # 3. Age analysis by satisfaction
+    print("\n3. Age analysis by satisfaction...")
+
+    # 3.1 Age distribution by satisfaction
+    fig2, axes2 = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Histogram
+    satisfied_ages = train_df_copy[train_df_copy['satisfaction'] == 'satisfied']['Age']
+    neutral_ages = train_df_copy[train_df_copy['satisfaction'] == 'neutral or dissatisfied']['Age']
+
+    axes2[0].hist([satisfied_ages, neutral_ages], bins=30, label=['Satisfied', 'Neutral/Dissatisfied'],
+                  color=['#1f77b4', '#ff7f0e'], alpha=0.7, edgecolor='black')
+    axes2[0].set_xlabel('Age')
+    axes2[0].set_ylabel('Frequency')
+    axes2[0].set_title('Age Distribution by Satisfaction')
+    axes2[0].legend()
+    axes2[0].grid(True, alpha=0.3)
+
+    # Box plot
+    sns.boxplot(x='satisfaction', y='Age', data=train_df_copy, ax=axes2[1], hue='satisfaction', palette=['#ff7f0e', '#1f77b4'], legend=False)
+    axes2[1].set_xlabel('Satisfaction')
+    axes2[1].set_ylabel('Age')
+    axes2[1].set_title('Age Distribution by Satisfaction (Box Plot)')
+
+    plt.tight_layout()
+    plt.savefig('figures/age_by_satisfaction.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/age_by_satisfaction.png")
+    plt.close(fig2)
+
+    # 3.2 Age groups analysis
+    print("\n3.2 Age groups analysis...")
+
+    # Create age groups
+    def create_age_groups(age):
+        if age <= 20:
+            return 'Teen (≤20)'
+        elif age <= 30:
+            return '20s'
+        elif age <= 40:
+            return '30s'
+        elif age <= 50:
+            return '40s'
+        elif age <= 60:
+            return '50s'
+        else:
+            return '60+'
+
+    train_df_copy['age_group'] = train_df_copy['Age'].apply(create_age_groups)
+
+    # Calculate satisfaction rate by age group
+    age_group_satisfaction = train_df_copy.groupby('age_group')['satisfaction_encoded'].mean() * 100
+    age_group_counts = train_df_copy['age_group'].value_counts()
+
+    print("\nSatisfaction rate by age group:")
+    for age_group in age_group_satisfaction.index:
+        rate = age_group_satisfaction[age_group]
+        count = age_group_counts[age_group]
+        print(f"  {age_group}: {rate:.1f}% satisfied (n={count})")
+
+    # 4. Service ratings analysis by satisfaction
+    print("\n4. Service ratings analysis by satisfaction...")
+
+    # List of service rating columns
+    service_columns = [
+        'Inflight wifi service', 'Departure/Arrival time convenient',
+        'Ease of Online booking', 'Gate location', 'Food and drink',
+        'Online boarding', 'Seat comfort', 'Inflight entertainment',
+        'On-board service', 'Leg room service', 'Baggage handling',
+        'Checkin service', 'Inflight service', 'Cleanliness'
+    ]
+
+    # Calculate mean ratings by satisfaction
+    satisfied_means = train_df_copy[train_df_copy['satisfaction'] == 'satisfied'][service_columns].mean()
+    neutral_means = train_df_copy[train_df_copy['satisfaction'] == 'neutral or dissatisfied'][service_columns].mean()
+
+    # Create comparison dataframe
+    rating_comparison = pd.DataFrame({
+        'Satisfied': satisfied_means,
+        'Neutral/Dissatisfied': neutral_means,
+        'Difference': satisfied_means - neutral_means
+    }).sort_values('Difference', ascending=False)
+
+    print("\nTop service differences (Satisfied - Neutral/Dissatisfied):")
+    print(rating_comparison.head(10))
+
+    # Save to CSV
+    rating_comparison.to_csv('reports/service_rating_differences.csv')
+    print("Saved service rating differences to: reports/service_rating_differences.csv")
+
+    # 4.1 Visualization: Service rating differences
+    fig3, ax3 = plt.subplots(figsize=(12, 8))
+    x = np.arange(len(rating_comparison))
+    width = 0.35
+
+    bars1 = ax3.barh(x - width/2, rating_comparison['Satisfied'], width, label='Satisfied', color='#1f77b4')
+    bars2 = ax3.barh(x + width/2, rating_comparison['Neutral/Dissatisfied'], width, label='Neutral/Dissatisfied', color='#ff7f0e')
+
+    ax3.set_yticks(x)
+    ax3.set_yticklabels(rating_comparison.index)
+    ax3.set_xlabel('Average Rating (0-5)')
+    ax3.set_title('Service Ratings by Satisfaction Level')
+    ax3.legend()
+    ax3.invert_yaxis()  # Highest difference at top
+
+    plt.tight_layout()
+    plt.savefig('figures/service_ratings_by_satisfaction.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/service_ratings_by_satisfaction.png")
+    plt.close(fig3)
+
+    # 5. Delay analysis by satisfaction
+    print("\n5. Delay analysis by satisfaction...")
+
+    # 5.1 Delay distributions
+    fig4, axes4 = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Departure delay
+    sns.boxplot(x='satisfaction', y='Departure Delay in Minutes', data=train_df_copy, ax=axes4[0], hue='satisfaction', palette=['#ff7f0e', '#1f77b4'], legend=False)
+    axes4[0].set_xlabel('Satisfaction')
+    axes4[0].set_ylabel('Departure Delay (minutes)')
+    axes4[0].set_title('Departure Delay by Satisfaction')
+    axes4[0].set_yscale('log')  # Log scale due to outliers
+
+    # Arrival delay
+    sns.boxplot(x='satisfaction', y='Arrival Delay in Minutes', data=train_df_copy, ax=axes4[1], hue='satisfaction', palette=['#ff7f0e', '#1f77b4'], legend=False)
+    axes4[1].set_xlabel('Satisfaction')
+    axes4[1].set_ylabel('Arrival Delay (minutes)')
+    axes4[1].set_title('Arrival Delay by Satisfaction')
+    axes4[1].set_yscale('log')  # Log scale due to outliers
+
+    plt.tight_layout()
+    plt.savefig('figures/delays_by_satisfaction.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/delays_by_satisfaction.png")
+    plt.close(fig4)
+
+    # 5.2 Delay statistics
+    print("\nDelay statistics by satisfaction:")
+    delay_stats = train_df_copy.groupby('satisfaction')[['Departure Delay in Minutes', 'Arrival Delay in Minutes']].agg(['mean', 'median', 'std'])
+    print(delay_stats)
+
+    # 6. Interaction analysis: Satisfaction by Class and Type of Travel
+    print("\n6. Interaction analysis: Satisfaction by Class and Type of Travel...")
+
+    # Create pivot table
+    pivot_table = train_df_copy.pivot_table(
+        index='Class',
+        columns='Type of Travel',
+        values='satisfaction_encoded',
+        aggfunc='mean'
+    ) * 100
+
+    print("\nSatisfaction rate by Class and Type of Travel (%):")
+    print(pivot_table)
+
+    # 6.1 Visualization: Heatmap of interactions
+    fig5, ax5 = plt.subplots(figsize=(8, 6))
+    sns.heatmap(pivot_table, annot=True, fmt='.1f', cmap='YlOrRd', ax=ax5, cbar_kws={'label': 'Satisfaction Rate (%)'})
+    ax5.set_title('Satisfaction Rate by Class and Type of Travel', fontsize=14)
+    ax5.set_xlabel('Type of Travel', fontsize=12)
+    ax5.set_ylabel('Class', fontsize=12)
+
+    plt.tight_layout()
+    plt.savefig('figures/satisfaction_class_travel_heatmap.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/satisfaction_class_travel_heatmap.png")
+    plt.close(fig5)
+
+    # 7. Correlation with target
+    print("\n7. Correlation with target...")
+
+    # Prepare data for correlation
+    corr_df = train_df_copy.copy()
+
+    # Encode categorical variables for correlation
+    for col in ['Gender', 'Customer Type', 'Type of Travel', 'Class', 'age_group']:
+        if col in corr_df.columns:
+            corr_df[col] = pd.factorize(corr_df[col])[0]
+
+    # Drop original satisfaction column (string) and other non-numeric columns
+    columns_to_drop = ['satisfaction']
+    if 'distance_category' in corr_df.columns:
+        columns_to_drop.append('distance_category')
+    corr_df = corr_df.drop(columns=columns_to_drop)
+
+    # Calculate correlations with target
+    correlations = corr_df.corr()['satisfaction_encoded'].drop('satisfaction_encoded').sort_values(ascending=False)
+
+    print("\nTop 10 features correlated with satisfaction (positive):")
+    print(correlations.head(10))
+
+    print("\nTop 10 features correlated with satisfaction (negative):")
+    print(correlations.tail(10))
+
+    # Save correlations to CSV
+    correlations.to_csv('reports/correlations_with_target.csv')
+    print("Saved correlations with target to: reports/correlations_with_target.csv")
+
+    # 7.1 Visualization: Top correlations with target
+    fig6, ax6 = plt.subplots(figsize=(10, 8))
+    top_correlations = pd.concat([correlations.head(15), correlations.tail(5)])
+    colors = ['green' if x > 0 else 'red' for x in top_correlations]
+
+    top_correlations.plot(kind='barh', color=colors, ax=ax6)
+    ax6.set_xlabel('Correlation with Satisfaction')
+    ax6.set_title('Top Features Correlated with Satisfaction', fontsize=14)
+    ax6.axvline(x=0, color='black', linestyle='-', linewidth=0.5)
+    ax6.invert_yaxis()
+
+    plt.tight_layout()
+    plt.savefig('figures/correlations_with_target.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/correlations_with_target.png")
+    plt.close(fig6)
+
+    # 8. Flight distance analysis
+    print("\n8. Flight distance analysis...")
+
+    # 8.1 Flight distance categories
+    def create_distance_categories(distance):
+        if distance <= 500:
+            return 'Short (≤500 mi)'
+        elif distance <= 1500:
+            return 'Medium (501-1500 mi)'
+        else:
+            return 'Long (>1500 mi)'
+
+    train_df_copy['distance_category'] = train_df_copy['Flight Distance'].apply(create_distance_categories)
+
+    # Calculate satisfaction by distance category
+    distance_satisfaction = train_df_copy.groupby('distance_category')['satisfaction_encoded'].mean() * 100
+    distance_counts = train_df_copy['distance_category'].value_counts()
+
+    print("\nSatisfaction by flight distance category:")
+    for category in distance_satisfaction.index:
+        rate = distance_satisfaction[category]
+        count = distance_counts[category]
+        print(f"  {category}: {rate:.1f}% satisfied (n={count})")
+
+    # 8.2 Visualization
+    fig7, axes7 = plt.subplots(1, 2, figsize=(12, 5))
+
+    # Box plot
+    sns.boxplot(x='satisfaction', y='Flight Distance', data=train_df_copy, ax=axes7[0], hue='satisfaction', palette=['#ff7f0e', '#1f77b4'], legend=False)
+    axes7[0].set_xlabel('Satisfaction')
+    axes7[0].set_ylabel('Flight Distance (miles)')
+    axes7[0].set_title('Flight Distance by Satisfaction')
+    axes7[0].set_yscale('log')
+
+    # Bar chart by distance category
+    distance_counts_df = train_df_copy.groupby(['distance_category', 'satisfaction']).size().unstack()
+    distance_counts_df.plot(kind='bar', stacked=True, ax=axes7[1], color=['#ff7f0e', '#1f77b4'])
+    axes7[1].set_xlabel('Distance Category')
+    axes7[1].set_ylabel('Count')
+    axes7[1].set_title('Satisfaction by Flight Distance Category')
+    axes7[1].legend(title='Satisfaction')
+    axes7[1].tick_params(axis='x', rotation=45)
+
+    plt.tight_layout()
+    plt.savefig('figures/flight_distance_analysis.png', dpi=150, bbox_inches='tight')
+    print("Saved: figures/flight_distance_analysis.png")
+    plt.close(fig7)
+
+    # 9. Statistical tests
+    print("\n9. Statistical tests...")
+
+    # 9.1 T-test for age difference
+    satisfied_age = train_df_copy[train_df_copy['satisfaction'] == 'satisfied']['Age']
+    neutral_age = train_df_copy[train_df_copy['satisfaction'] == 'neutral or dissatisfied']['Age']
+    t_stat_age, p_val_age = stats.ttest_ind(satisfied_age, neutral_age, equal_var=False)
+
+    print(f"\nAge difference between satisfied and neutral/dissatisfied:")
+    print(f"  Satisfied mean: {satisfied_age.mean():.2f} years")
+    print(f"  Neutral mean: {neutral_age.mean():.2f} years")
+    print(f"  T-statistic: {t_stat_age:.4f}")
+    print(f"  P-value: {p_val_age:.4f}")
+    print(f"  Significant difference: {'YES' if p_val_age < 0.05 else 'NO'}")
+
+    # 9.2 T-test for departure delay
+    satisfied_dep_delay = train_df_copy[train_df_copy['satisfaction'] == 'satisfied']['Departure Delay in Minutes']
+    neutral_dep_delay = train_df_copy[train_df_copy['satisfaction'] == 'neutral or dissatisfied']['Departure Delay in Minutes']
+    t_stat_delay, p_val_delay = stats.ttest_ind(satisfied_dep_delay, neutral_dep_delay, equal_var=False)
+
+    print(f"\nDeparture delay difference between satisfied and neutral/dissatisfied:")
+    print(f"  Satisfied mean: {satisfied_dep_delay.mean():.2f} minutes")
+    print(f"  Neutral mean: {neutral_dep_delay.mean():.2f} minutes")
+    print(f"  T-statistic: {t_stat_delay:.4f}")
+    print(f"  P-value: {p_val_delay:.4f}")
+    print(f"  Significant difference: {'YES' if p_val_delay < 0.05 else 'NO'}")
+
+    # 10. Summary insights
+    print("\n" + "="*80)
+    print("SUMMARY INSIGHTS FROM ADVANCED EDA")
+    print("="*80)
+
+    print("\n1. **Demographic Insights:**")
+    print(f"   - Highest satisfaction: {class_satisfaction.idxmax()} class ({class_satisfaction.max():.1f}%)")
+    print(f"   - Lowest satisfaction: {class_satisfaction.idxmin()} class ({class_satisfaction.min():.1f}%)")
+    print(f"   - Business travelers: {travel_satisfaction['Business travel']:.1f}% satisfied")
+    print(f"   - Personal travelers: {travel_satisfaction['Personal Travel']:.1f}% satisfied")
+
+    print("\n2. **Service Insights:**")
+    print(f"   - Largest rating gap: {rating_comparison.index[0]} ({rating_comparison['Difference'].iloc[0]:.2f} points)")
+    print(f"   - Smallest rating gap: {rating_comparison.index[-1]} ({rating_comparison['Difference'].iloc[-1]:.2f} points)")
+
+    print("\n3. **Operational Insights:**")
+    print(f"   - Average departure delay for satisfied: {satisfied_dep_delay.mean():.1f} minutes")
+    print(f"   - Average departure delay for neutral: {neutral_dep_delay.mean():.1f} minutes")
+    print(f"   - Delay difference is {'statistically significant' if p_val_delay < 0.05 else 'not statistically significant'}")
+
+    print("\n4. **Interaction Insights:**")
+    print(f"   - Best combination: {pivot_table.max().idxmax()} travel in {pivot_table.idxmax()[pivot_table.max().idxmax()]} class ({pivot_table.max().max():.1f}%)")
+    print(f"   - Worst combination: {pivot_table.min().idxmin()} travel in {pivot_table.idxmin()[pivot_table.min().idxmin()]} class ({pivot_table.min().min():.1f}%)")
+
+    print("\n5. **Correlation Insights:**")
+    print(f"   - Most positively correlated: {correlations.index[0]} ({correlations.iloc[0]:.3f})")
+    print(f"   - Most negatively correlated: {correlations.index[-1]} ({correlations.iloc[-1]:.3f})")
+
+    print("\n" + "="*80)
+    print("ADVANCED EDA COMPLETED")
+    print("="*80)
+    print(f"\nGenerated {8} new visualizations in figures/ directory")
+    print(f"Generated {2} new reports in reports/ directory")
+
+    # Clean up temporary columns
+    train_df_copy = train_df_copy.drop(columns=['satisfaction_encoded', 'age_group', 'distance_category'])
+
+    print("\nAll advanced EDA analyses completed successfully!")
+
+    return train_df_copy
+
+def generate_model_comparison_plots(all_results):
+    """
+    Generate additional comparison plots for model evaluation.
+    """
+    print("\n\\nGenerating additional model comparison plots...")
+
+    # Create directories if they don't exist
+    os.makedirs('figures', exist_ok=True)
+
+    # 1. Multi-metric comparison bar plot
+    print("Creating multi-metric comparison bar plot...")
+    fig1, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+
+    # Sort by Accuracy for consistency
+    df_sorted = all_results.sort_values('Accuracy', ascending=False)
+    models = df_sorted['Model']
+    x = np.arange(len(models))
+    width = 0.2
+
+    # Accuracy bars
+    bars1 = ax1.bar(x - width, df_sorted['Accuracy'], width, label='Accuracy', color='steelblue')
+    # F1-Score bars
+    bars2 = ax1.bar(x, df_sorted['F1-Score'], width, label='F1-Score', color='orange')
+    # ROC-AUC bars
+    bars3 = ax1.bar(x + width, df_sorted['ROC-AUC'], width, label='ROC-AUC', color='green')
+
+    ax1.set_xlabel('Model', fontsize=12)
+    ax1.set_ylabel('Score', fontsize=12)
+    ax1.set_title('Multi-Metric Comparison of All Models', fontsize=14)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(models, rotation=45, ha='right')
+    ax1.legend()
+    ax1.grid(True, alpha=0.3, axis='y')
+    ax1.set_ylim(0.8, 1.0)
+
+    # Add value labels on bars
+    for bars in [bars1, bars2, bars3]:
+        for bar in bars:
+            height = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2., height + 0.002,
+                    f'{height:.3f}', ha='center', va='bottom', fontsize=8)
+
+    # 2. Training time comparison (log scale)
+    ax2.bar(models, df_sorted['Training Time (s)'], color='crimson')
+    ax2.set_xlabel('Model', fontsize=12)
+    ax2.set_ylabel('Training Time (seconds)', fontsize=12)
+    ax2.set_title('Training Time Comparison (Log Scale)', fontsize=14)
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(models, rotation=45, ha='right')
+    ax2.set_yscale('log')
+    ax2.grid(True, alpha=0.3, axis='y')
+
+    # Add value labels
+    for i, (model, time) in enumerate(zip(models, df_sorted['Training Time (s)'])):
+        ax2.text(i, time * 1.2, f'{time:.1f}s', ha='center', va='bottom', fontsize=8, rotation=0)
+
+    plt.tight_layout()
+    plt.savefig('figures/multi_metric_comparison.png', dpi=150, bbox_inches='tight')
+    print("Saved multi-metric comparison visualization: figures/multi_metric_comparison.png")
+    plt.close(fig1)
+
+    # 3. Model performance heatmap
+    print("Creating model performance heatmap...")
+    # Create a DataFrame for heatmap (metrics as columns, models as rows)
+    heatmap_data = df_sorted[['Accuracy', 'F1-Score', 'ROC-AUC']].copy()
+    heatmap_data.index = df_sorted['Model']
+
+    fig2, ax3 = plt.subplots(figsize=(10, 8))
+    sns.heatmap(heatmap_data, annot=True, fmt='.3f', cmap='YlOrRd', ax=ax3, cbar_kws={'label': 'Score'})
+    ax3.set_title('Model Performance Heatmap', fontsize=14)
+    ax3.set_xlabel('Metric', fontsize=12)
+    ax3.set_ylabel('Model', fontsize=12)
+    plt.tight_layout()
+    plt.savefig('figures/performance_heatmap.png', dpi=150, bbox_inches='tight')
+    print("Saved performance heatmap: figures/performance_heatmap.png")
+    plt.close(fig2)
+
+    # 4. Trade-off analysis: Accuracy vs Training Time
+    print("Creating accuracy vs training time scatter plot...")
+    fig3, ax4 = plt.subplots(figsize=(10, 6))
+
+    # Plot each model
+    scatter = ax4.scatter(df_sorted['Accuracy'], df_sorted['Training Time (s)'], s=100, alpha=0.7,
+                         c=range(len(df_sorted)), cmap='viridis')
+
+    # Add model labels
+    for i, row in df_sorted.iterrows():
+        ax4.annotate(row['Model'], (row['Accuracy'], row['Training Time (s)']),
+                    xytext=(5, 5), textcoords='offset points', fontsize=8)
+
+    ax4.set_xlabel('Accuracy', fontsize=12)
+    ax4.set_ylabel('Training Time (seconds, log scale)', fontsize=12)
+    ax4.set_title('Accuracy vs Training Time Trade-off', fontsize=14)
+    ax4.set_yscale('log')
+    ax4.grid(True, alpha=0.3)
+
+    # Add a reference line for Pareto frontier (simplified)
+    # Sort by accuracy descending, time ascending
+    pareto = df_sorted.sort_values(['Accuracy', 'Training Time (s)'], ascending=[False, True])
+    ax4.plot(pareto['Accuracy'], pareto['Training Time (s)'], 'r--', alpha=0.5, label='Pareto Frontier (approx)')
+    ax4.legend()
+
+    plt.tight_layout()
+    plt.savefig('figures/accuracy_vs_time_tradeoff.png', dpi=150, bbox_inches='tight')
+    print("Saved accuracy vs training time trade-off visualization: figures/accuracy_vs_time_tradeoff.png")
+    plt.close(fig3)
+
+    print("\nAll additional model comparison visualizations generated successfully!")
 
 def main():
     """
@@ -323,6 +845,12 @@ def main():
         print("Saved outlier information to: reports/outlier_info.csv")
     else:
         print("No outliers detected (Z-score > 3).")
+
+    # Advanced EDA with additional analyses and visualizations
+    print("\n" + "=" * 80)
+    print("ADVANCED EXPLORATORY DATA ANALYSIS")
+    print("=" * 80)
+    advanced_eda(train_df, test_df)
 
     print("\n" + "=" * 80)
     print("EDA COMPLETED")
@@ -671,6 +1199,9 @@ def main():
     # Save all results to CSV
     all_results.to_csv('reports/model_results_final.csv', index=False)
     print("\\nSaved final model results to: reports/model_results_final.csv")
+
+    # Generate additional model comparison plots
+    generate_model_comparison_plots(all_results)
 
     # Generate markdown table for report
     print("\\nGenerating markdown table for report...")
