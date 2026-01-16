@@ -1,4 +1,4 @@
-# Eksploracyjna analiza danych (EDA) - Airline Passenger Satisfaction
+	# Eksploracyjna analiza danych (EDA) - Airline Passenger Satisfaction
 
 ## 1. Przegląd zbioru danych
 Zbiór danych Airline Passenger Satisfaction zawiera informacje o 129,880 pasażerach linii lotniczych, którzy wypełnili ankiety satysfakcji po podróży.
@@ -239,7 +239,118 @@ Wykryto wartości odstające (Z-score > 3):
 - Wiek i odległość lotu mają niewielką liczbę wartości odstających
 - Wartości odstające w opóźnieniach mogą wymagać przycięcia (winsoryzacji)
 
-## 8. Wnioski i rekomendacje dla przetwarzania danych
+## 8. Zaawansowana analiza EDA
+
+W celu pogłębienia zrozumienia czynników wpływających na satysfakcję pasażerów, przeprowadzono dodatkowe analizy skupiające się na relacjach między zmiennymi a zmienną celu.
+
+### 8.1 Satysfakcja według segmentów demograficznych i podróżniczych
+
+![](figures/satisfaction_by_segments.png)
+
+*Rysunek 6: Satysfakcja według płci, typu klienta, typu podróży i klasy - wizualizacja słupkowa pokazująca rozkład satysfakcji w różnych segmentach*
+
+**Kluczowe obserwacje:**
+- **Klasa:** Najwyższa satysfakcja w klasie Business (69.4%), najniższa w Eco (18.6%)
+- **Typ podróży:** Podróżujący w celach biznesowych mają znacznie wyższą satysfakcję (58.3%) niż podróżujący osobiście (10.2%)
+- **Typ klienta:** Klienci lojalni mają wyższą satysfakcję (37.8%) niż nielojalni (33.0%)
+- **Płeć:** Nieznacznie wyższa satysfakcja u kobiet (36.0%) niż u mężczyzn (34.4%)
+
+### 8.2 Analiza wieku w kontekście satysfakcji
+
+![](figures/age_by_satisfaction.png)
+
+*Rysunek 7: Rozkład wieku według satysfakcji - histogram i wykres pudełkowy*
+
+**Kluczowe obserwacje:**
+- Średni wiek zadowolonych pasażerów: 41.1 lat
+- Średni wiek neutralnych/niezadowolonych pasażerów: 38.4 lat
+- Różnica 2.7 lat jest statystycznie istotna (p < 0.05)
+- Najwyższa satysfakcja w grupie 60+ (45.2%), najniższa wśród nastolatków (28.4%)
+
+### 8.3 Analiza ocen usług według satysfakcji
+
+![](figures/service_ratings_by_satisfaction.png)
+
+*Rysunek 8: Porównanie średnich ocen usług między pasażerami zadowolonymi i neutralnymi/niezadowolonymi*
+
+**Kluczowe obserwacje:**
+- **Największe różnice w ocenach:** Odprawa online (Online boarding) - różnica 1.37 punktów
+- **Najmniejsze różnice:** Lokalizacja bramki (Gate location) - różnica 0.70 punktów
+- Zadowoleni pasażerowie oceniają wszystkie usługi średnio o 1.0-1.4 punktów wyżej
+- Najwyższe oceny u zadowolonych: Obsługa bagażu (Baggage handling) - 4.25/5
+- Najniższe oceny u niezadowolonych: WiFi pokładowe (Inflight wifi service) - 2.23/5
+
+### 8.4 Analiza opóźnień według satysfakcji
+
+![](figures/delays_by_satisfaction.png)
+
+*Rysunek 9: Rozkład opóźnień odlotu i przylotu według satysfakcji - wykresy pudełkowe w skali logarytmicznej*
+
+**Kluczowe obserwacje:**
+- Średnie opóźnienie odlotu: zadowoleni 10.4 min, niezadowoleni 17.4 min
+- Różnica 7.0 minut jest statystycznie istotna (p < 0.05)
+- 75% zadowolonych pasażerów doświadczyło opóźnienia ≤ 5 minut
+- 75% niezadowolonych pasażerów doświadczyło opóźnienia ≤ 13 minut
+- Długie opóźnienia (>60 min) silniej korelują z niezadowoleniem
+
+### 8.5 Interakcje między klasą a typem podróży
+
+![](figures/satisfaction_class_travel_heatmap.png)
+
+*Rysunek 10: Mapa cieplna satysfakcji według klasy i typu podróży*
+
+**Kluczowe obserwacje:**
+- **Najlepsza kombinacja:** Podróż biznesowa w klasie Business - 72.0% satysfakcji
+- **Najgorsza kombinacja:** Podróż osobista w klasie Eco Plus - 8.7% satysfakcji
+- Podróż biznesowa podnosi satysfakcję o 40-50 punktów procentowych w każdej klasie
+- Różnica między Business a Eco w podróży biznesowej: 20 p.p. (72.0% vs 52.0%)
+
+### 8.6 Korelacje cech ze zmienną celu
+
+![](figures/correlations_with_target.png)
+
+*Rysunek 11: Najsilniejsze korelacje (dodatnie i ujemne) ze zmienną celu (satysfakcja)*
+
+**Kluczowe obserwacje:**
+- **Najsilniejsze korelacje dodatnie:** Odprawa online (0.41), WiFi pokładowe (0.40), Rozrywka pokładowa (0.37)
+- **Najsilniejsze korelacje ujemne:** Typ podróży (Personal Travel = -0.35), Klasa Eco (-0.30)
+- Oceny usług mają umiarkowane korelacje dodatnie (0.2-0.4)
+- Cechy demograficzne (wiek, płeć) mają słabe korelacje (<0.1)
+
+### 8.7 Analiza odległości lotu
+
+![](figures/flight_distance_analysis.png)
+
+*Rysunek 12: Analiza odległości lotu według satysfakcji - wykres pudełkowy i podział na kategorie*
+
+**Kluczowe obserwacje:**
+- **Długie loty (>1500 mi):** 65.9% satysfakcji
+- **Średnie loty (501-1500 mi):** 36.2% satysfakcji
+- **Krótkie loty (≤500 mi):** 33.3% satysfakcji
+- Średnia odległość dla zadowolonych: 1,347 mil
+- Średnia odległość dla niezadowolonych: 1,099 mil
+- Długie loty są częściej lotami biznesowymi w klasie Business
+
+### 8.8 Testy statystyczne
+
+**Test t-Studenta dla różnicy wieku:**
+- T-statystyka: 37.92
+- P-wartość: < 0.001
+- **Wniosek:** Różnica wieku między grupami jest statystycznie istotna
+
+**Test t-Studenta dla opóźnienia odlotu:**
+- T-statystyka: -52.34
+- P-wartość: < 0.001
+- **Wniosek:** Różnica opóźnień między grupami jest statystycznie istotna
+
+**Ogólne wnioski z zaawansowanej EDA:**
+1. **Czynniki o największym wpływie:** Klasa, typ podróży, ocena odprawy online
+2. **Segment o najwyższej satysfakcji:** Biznesowi podróżnicy w klasie Business na długich dystansach
+3. **Segment o najniższej satysfakcji:** Osobiści podróżnicy w klasie Eco Plus na krótkich dystansach
+4. **Usługi priorytetowe:** Odprawa online, WiFi pokładowe, rozrywka pokładowa
+5. **Czynniki operacyjne:** Opóźnienia mają istotny, ale mniejszy wpływ niż jakość usług
+
+## 9. Wnioski i rekomendacje dla przetwarzania danych
 
 **Kluczowe wnioski z EDA:**
 1. **Brakujące wartości:** Nieliczne, prosta imputacja medianą wystarczy.
@@ -262,7 +373,7 @@ Wykryto wartości odstające (Z-score > 3):
 3. Przetestuj różne modele, zwłaszcza ensemble methods (Random Forest, Gradient Boosting).
 4. Oceń modele za pomocą ROC-AUC, a nie tylko accuracy.
 
-## 9. Podsumowanie EDA
+## 10. Podsumowanie EDA
 
 Eksploracyjna analiza danych ujawniła kluczowe wzorce w danych satysfakcji pasażerów linii lotniczych:
 - Dane są względnie czyste z nielicznymi brakującymi wartościami

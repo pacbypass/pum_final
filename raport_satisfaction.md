@@ -159,6 +159,43 @@ Projekt dotyczy przewidywania satysfakcji pasażerów linii lotniczych na podsta
 3. Dostrojenie hiperparametrów poprawiło wyniki średnio o 2-3%.
 4. Czas treningu różnił się znacząco między modelami.
 
+**Analiza błędów i kosztów klasyfikacji:**
+
+Na podstawie macierzy pomyłek najlepszego modelu (Random Forest) można wyciągnąć następujące wnioski dotyczące błędów klasyfikacji:
+
+1. **Rozkład błędów:**
+   - **Fałszywie pozytywne (FP):** 376 przypadków - model przewiduje satysfakcję, gdy pasażer jest faktycznie niezadowolony. Te błędy oznaczają utracone szanse na interwencję i poprawę doświadczenia klienta.
+   - **Fałszywie negatywne (FN):** 381 przypadków - model przewiduje niezadowolenie, gdy pasażer jest faktycznie zadowolony. Te błędy prowadzą do niepotrzebnych kosztów interwencji.
+
+2. **Wskaźniki błędów:**
+   - **False Positive Rate (FPR):** 1.28% - niski wskaźnik, co oznacza, że model rzadko myli niezadowolonych pasażerów za zadowolonych.
+   - **False Negative Rate (FNR):** 1.95% - nieco wyższy wskaźnik, co sugeruje, że model częściej myli zadowolonych pasażerów za niezadowolonych.
+
+3. **Koszty biznesowe błędów:**
+   - **Koszty FP:** Utracony przychód z potencjalnych przyszłych podróży, negatywne recenzje, spadek lojalności. Szacunkowy koszt: wysoki (utrata klienta długoterminowego).
+   - **Koszty FN:** Niepotrzebne wydatki na interwencje (vouchery, upgrade'y, personel). Szacunkowy koszt: średni (jednorazowy wydatek).
+
+4. **Optymalizacja progu klasyfikacji:**
+   - Dla linii lotniczych, gdzie utrzymanie klienta jest priorytetem, warto obniżyć próg klasyfikacji dla klasy "zadowolony", zmniejszając liczbę FP (bardziej agresywnie identyfikując niezadowolonych).
+   - Obecny próg 0.5 można obniżyć do 0.4, co zwiększy czułość (recall) dla klasy "zadowolony" kosztem precyzji.
+
+5. **Porównanie błędów między modelami:**
+   - Modele zespołowe (Random Forest, Gradient Boosting) mają najbardziej zrównoważony rozkład błędów.
+   - Modele probabilistyczne (Naive Bayes) mają wyższy wskaźnik FP, co czyni je mniej odpowiednimi dla aplikacji biznesowych.
+
+**Porównanie dokładności modeli:**
+
+![](figures/model_comparison_accuracy.png)
+
+*Rysunek 9: Porównanie dokładności (Accuracy) wszystkich modeli - modele zespołowe osiągają najwyższe wyniki*
+
+**Dodatkowe wnioski z porównania modeli:**
+5. **SVM** osiągnął bardzo dobre wyniki (accuracy: 95.38%) pomimo prostoty modelu.
+6. **K-Nearest Neighbors** osiągnął accuracy 92.22%, co jest dobrym wynikiem dla algorytmu opartego na podobieństwie.
+7. **Modele probabilistyczne** (Naive Bayes, LDA, QDA) osiągnęły najniższe wyniki, sugerując, że założenia o rozkładzie danych nie są w pełni spełnione.
+8. **AdaBoost** osiągnął accuracy 90.95%, co potwierdza skuteczność technik boosting.
+9. **Czasy trenowania** różnią się o kilka rzędów wielkości: od 0.05s (KNN) do 2854s (Extra Trees Tuned).
+
 **Top 5 najważniejszych cech:**
 1. Online boarding (ocena odprawy online) - 15.18%
 2. Inflight wifi service (ocena wifi pokładowego) - 14.82%
@@ -172,6 +209,70 @@ Projekt dotyczy przewidywania satysfakcji pasażerów linii lotniczych na podsta
 3. Klasa podróży znacząco wpływa na satysfakcję.
 4. Opóźnienia mają umiarkowany wpływ na satysfakcję.
 5. Cechy demograficzne (wiek, płeć) mają mniejsze znaczenie.
+
+## Dodatkowe analizy i wizualizacje
+
+W celu pogłębienia analizy wyników modelowania, wygenerowano dodatkowe wizualizacje porównujące modele pod względem różnych metryk i czasu trenowania.
+
+**Porównanie wielometryczne modeli:**
+
+![](figures/multi_metric_comparison.png)
+
+*Rysunek 10: Porównanie trzech kluczowych metryk (Accuracy, F1-Score, ROC-AUC) dla wszystkich modeli - modele zespołowe osiągają najwyższe wyniki we wszystkich metrykach*
+
+**Heatmapa wydajności modeli:**
+
+![](figures/performance_heatmap.png)
+
+*Rysunek 11: Heatmapa wydajności modeli - wizualne porównanie Accuracy, F1-Score i ROC-AUC; kolory wskazują na wyższe wartości (żółty/czerwony)*
+
+**Analiza kompromisu dokładność-czas trenowania:**
+
+![](figures/accuracy_vs_time_tradeoff.png)
+
+*Rysunek 12: Analiza kompromisu między dokładnością a czasem trenowania - modele w prawym dolnym rogu są optymalne (wysoka dokładność, niski czas); linia Pareto wskazuje granicę efektywności*
+
+**Kluczowe wnioski z dodatkowych analiz:**
+1. **Random Forest (Tuned)** osiąga najlepsze wyniki we wszystkich metrykach, ale ma najdłuższy czas trenowania.
+2. **SVM** oferuje najlepszy kompromis między dokładnością a czasem trenowania dla aplikacji wymagających częstego retrenowania.
+3. **Modele probabilistyczne** (Naive Bayes, LDA, QDA) mają najniższe wyniki we wszystkich metrykach, potwierdzając ich niedopasowanie do struktury danych.
+4. **K-Nearest Neighbors** ma najkrótszy czas trenowania (0.05s) przy zachowaniu przyzwoitej dokładności (92.22%).
+5. **Extra Trees (Tuned)** ma najdłuższy czas trenowania (2854s) przy niewielkiej poprawie dokładności w porównaniu do wersji nietunowanej.
+
+## Rekomendacje biznesowe
+
+Na podstawie przeprowadzonej analizy i wyników modelowania, linie lotnicze mogą podjąć następujące działania w celu poprawy satysfakcji pasażerów:
+
+**1. Priorytetyzacja usług pokładowych:**
+- **Odprawa online (Online boarding)** - najważniejszy czynnik (15.18% ważności). Należy inwestować w rozwój i udoskonalanie systemów odprawy online, zapewniając intuicyjny interfejs i szybkie procesy.
+- **WiFi pokładowe (Inflight wifi service)** - drugi najważniejszy czynnik (14.82%). Poprawa jakości i prędkości internetu pokładowego jest kluczowa dla satysfakcji pasażerów, szczególnie w erze cyfrowej.
+- **Rozrywka pokładowa (Inflight entertainment)** - piąty najważniejszy czynnik (5.72%). Wzbogacenie oferty rozrywkowej (filmy, muzyka, gry) może znacząco poprawić doświadczenia pasażerów.
+
+**2. Segmentacja klientów:**
+- **Pasażerowie biznesowi** stanowią 69.0% podróżujących i mają wyższe oczekiwania. Należy zapewnić im dedykowane usługi: priorytetową odprawę, lepsze WiFi do pracy, wygodniejsze siedzenia.
+- **Klienci lojalni** stanowią 81.7% pasażerów. Programy lojalnościowe powinny być wzmocnione, z nagrodami bezpośrednio wpływającymi na satysfakcję (dostęp do lepszych usług).
+
+**3. Zarządzanie opóźnieniami:**
+- Opóźnienia mają umiarkowany wpływ na satysfakcję. Należy wdrażać proaktywne komunikaty o opóźnieniach, oferować rekompensaty (vouchery, napoje) oraz optymalizować procesy obsługi naziemnej.
+
+**4. Personalizacja usług:**
+- Wykorzystanie modelu predykcyjnego do identyfikacji pasażerów z ryzykiem niskiej satysfakcji przed podróżą. Dla tych pasażerów można zaoferować ulepszenia (upgrade klasy, specjalne posiłki, personalizowane powitanie).
+
+**5. Monitorowanie w czasie rzeczywistym:**
+- Implementacja systemu monitorowania satysfakcji w czasie rzeczywistym na podstawie danych z ankiet i predykcji modelu. Pozwoli to na szybką reakcję na problemy.
+
+**6. Koszty błędów klasyfikacji:**
+- **Fałszywie pozytywne** (przewidywanie satysfakcji gdy pasażer jest niezadowolony): ryzyko utraty szansy na poprawę doświadczenia.
+- **Fałszywie negatywne** (przewidywanie niezadowolenia gdy pasażer jest zadowolony): niepotrzebne koszty interwencji.
+- Należy zrównoważyć koszty, optymalizując próg klasyfikacji modelu.
+
+**7. Wybór modelu do wdrożenia:**
+- **Random Forest (Tuned)** osiągnął najwyższą dokładność (96.42%) ale wymaga najdłuższego czasu trenowania (2135s).
+- **SVM** oferuje dobry kompromis między dokładnością (95.38%) a czasem trenowania (842s).
+- Dla wdrożenia w czasie rzeczywistym można rozważyć **Random Forest** bez tuningu (96.41% dokładności, tylko 20s trenowania).
+
+**8. Metryki sukcesu:**
+- Monitorowanie wskaźników biznesowych: wzrost liczby pozytywnych recenzji, zwiększenie lojalności klientów, redukcja reklamacji, wzrost przychodów z programów lojalnościowych.
 
 ## Podsumowanie
 
@@ -204,3 +305,11 @@ Projekt dotyczy przewidywania satysfakcji pasażerów linii lotniczych na podsta
 ### Załącznik 1. Eksploracyjna analiza danych
 
 Pełna eksploracyjna analiza danych dostępna w osobnym pliku: `eda_satisfaction.md`
+
+Załącznik zawiera kompleksową analizę danych, w tym:
+- Analizę brakujących wartości, rozkładów i korelacji
+- **Zaawansowane analizy:** segmentację satysfakcji według demografii i typu podróży
+- **Analizy interakcji:** mapy cieplne satysfakcji według klasy i typu podróży
+- **Testy statystyczne:** testy t-Studenta dla różnic wieku i opóźnień
+- **Analizy priorytetowych usług:** identyfikację usług o największym wpływie na satysfakcję
+- **Wizualizacje:** 12 rysunków ilustrujących kluczowe zależności w danych
