@@ -1222,8 +1222,8 @@ def main():
         acc = row['Accuracy']
         f1 = row['F1-Score']
         roc = row['ROC-AUC']
-        time = row['Training Time (s)']
-        md_table += f'| {model} | {acc} | {f1} | {roc} | {time} |\n'
+        training_time = row['Training Time (s)']
+        md_table += f'| {model} | {acc} | {f1} | {roc} | {training_time} |\n'
 
     # Save markdown table to file
     with open('reports/model_results_table.md', 'w') as f:
